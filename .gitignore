@@ -1,23 +1,27 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Node (React frontend)
+node_modules/
+build/
+dist/
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
+# IntelliJ / VSCode / IDE
+.idea/
+.vscode/
+*.iml
 
-# testing
-/coverage
+# Logs
+logs/
+*.log
 
-# production
-/build
-
-# misc
-.DS_Store
+# Environment files
+.env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Firebase private keys (çok önemli!)
+auth-service/src/main/resources/firebase-service-account.json
+
+# Maven (Spring Boot backend)
+target/
+
+# OS files
+.DS_Store
+
