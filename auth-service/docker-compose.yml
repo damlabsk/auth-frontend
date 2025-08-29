@@ -1,0 +1,15 @@
+version: '3.8'
+name: movished-service
+services:
+  movieshed-db:
+    build:
+      context: .
+      dockerfile: DockerFile_db
+    image: movieshed:latest
+    container_name: movieshed-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=movieshed_db

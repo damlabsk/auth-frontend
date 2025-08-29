@@ -14,9 +14,29 @@ function ProfilePage() {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       const parsed = JSON.parse(storedUser);
-      setUser(parsed);
-      setNewFirstName(parsed.firstName);
-      setNewLastName(parsed.lastName);
+      console.log("✅ Loaded user:", parsed);
+
+      // unify fields (support both signup flows)
+      const firstName =
+        parsed.firstName ??
+        (parsed.displayName ? parsed.displayName.split(" ")[0] : "");
+      const lastName =
+        parsed.lastName ??
+        (parsed.displayName
+          ? parsed.displayName.split(" ").slice(1).join(" ")
+          : "");
+      const photo = parsed.photo ?? parsed.photoUrl ?? null;
+
+      setUser({
+        firstName,
+        lastName,
+        photo,
+        email: parsed.email ?? null,
+        uid: parsed.uid ?? null,
+      });
+
+      setNewFirstName(firstName);
+      setNewLastName(lastName);
     } else {
       navigate("/profile-setup");
     }
@@ -34,6 +54,7 @@ function ProfilePage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         const updatedUser = {
+          ...user,
           firstName: newFirstName,
           lastName: newLastName,
           photo: reader.result,
@@ -45,9 +66,9 @@ function ProfilePage() {
       reader.readAsDataURL(newPhoto);
     } else {
       const updatedUser = {
+        ...user,
         firstName: newFirstName,
         lastName: newLastName,
-        photo: user.photo,
       };
       localStorage.setItem("user", JSON.stringify(updatedUser));
       setUser(updatedUser);
