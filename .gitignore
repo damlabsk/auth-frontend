@@ -1,29 +1,7 @@
-# Node (React frontend)
 node_modules/
 build/
-dist/
-
-# IntelliJ / VSCode / IDE
+.DS_Store
 .idea/
 .vscode/
-*.iml
-
-# Logs
-logs/
-*.log
-
-# Environment files
-.env
-.env.local
-
-# Firebase private keys (çok önemli!)
-auth-service/src/main/resources/firebase-service-account.json
-
-# Maven (Spring Boot backend)
-target/
-
-# OS files
-.DS_Store
-
-auth-service/src/main/resources/firebase-service-account.json
 src/main/resources/firebase-service-account.json
+
