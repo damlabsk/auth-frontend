@@ -19,7 +19,7 @@ function LoginPage() {
   const syncWithBackend = async (user) => {
     if (!user) return;
     const idToken = await user.getIdToken(true);
-  
+
     const body = {
       uid: user.uid,
       email: user.email ?? null,
@@ -27,36 +27,49 @@ function LoginPage() {
       photoUrl: user.photoURL ?? null,
       providerId: user.providerData?.[0]?.providerId ?? null,
     };
-  
+
     // Call backend login
     const response = await axios.post(
       "http://localhost:8080/api/v1/auth/login",
       body,
       { headers: { Authorization: `Bearer ${idToken}` } }
     );
-  
-    // Load existing local profile (from ProfileSetup)
+
+    // Load existing local profile
     const existingUser = JSON.parse(localStorage.getItem("user") || "{}");
-  
-    // Merge backend + local profile
+
+    // Merge carefully (prefer non-null values; keep local names/photo if backend/Firebase are null)
     const mergedUser = {
-      ...existingUser,          // keep firstName, lastName, photo if already set
-      ...response.data,         // backend fields (uid, email, etc.)
-      displayName: user.displayName ?? response.data.displayName,
+      ...response.data, // backend truth
+      ...existingUser,  // keep locally set fields (firstName, lastName, photoUrl) if present
+      uid: response.data.uid ?? existingUser.uid ?? user.uid,
+      email: response.data.email ?? existingUser.email ?? user.email ?? null,
+      provider:
+        response.data.provider ??
+        existingUser.provider ??
+        user.providerData?.[0]?.providerId ??
+        null,
+      displayName:
+        user.displayName ||
+        response.data.displayName ||
+        existingUser.displayName ||
+        null,
+      firstName:
+        existingUser.firstName || response.data.firstName || null,
+      lastName:
+        existingUser.lastName || response.data.lastName || null,
       photoUrl:
-        user.photoURL ??
-        response.data.photoUrl ??
-        existingUser.photo,     // fallback to local photo
+        user.photoURL ||
+        response.data.photoUrl ||
+        existingUser.photoUrl ||
+        null,
     };
-  
+
     localStorage.setItem("user", JSON.stringify(mergedUser));
-    console.log("✅ Stored user (merged):", mergedUser);
-  
-    // Redirect to profile
     navigate("/profile");
   };
-  
-  // --- Email/Password login ---
+
+  // Email/Password login
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     try {
@@ -68,7 +81,7 @@ function LoginPage() {
     }
   };
 
-  // --- OAuth logins ---
+  // OAuth logins
   const handleGoogleSignIn = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -144,7 +157,6 @@ function LoginPage() {
 
         <div className="divider">Or</div>
 
-        {/* Email/Password login form */}
         <form onSubmit={handleEmailLogin}>
           <input
             type="email"

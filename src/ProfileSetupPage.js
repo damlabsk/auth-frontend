@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { auth } from "./firebase";
+import axios from "axios";
 import "./LoginPage.css";
 
 function ProfileSetupPage() {
@@ -11,25 +13,50 @@ function ProfileSetupPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Foto base64 çevirip saklayalım ki ProfilePage'de gösterelim
-    if (photo) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        localStorage.setItem("user", JSON.stringify({
-          firstName,
-          lastName,
-          photo: reader.result
-        }));
-        navigate("/profile");
-      };
-      reader.readAsDataURL(photo);
-    } else {
-      localStorage.setItem("user", JSON.stringify({
+    const saveProfile = async (base64Photo) => {
+      const displayName = `${firstName} ${lastName}`.trim();
+
+      // Prepare payload for backend
+      const profileData = {
+        displayName,
+        photoUrl: base64Photo,
         firstName,
         lastName,
-        photo: null
-      }));
+      };
+
+      try {
+        const idToken = await auth.currentUser.getIdToken(true);
+
+        // Persist to backend (register/update)
+        await axios.post("http://localhost:8080/api/v1/auth/register", profileData, {
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
+      } catch (err) {
+        console.error("Profile setup sync failed:", err);
+      }
+
+      // Store locally as well (normalized keys)
+      const user = auth.currentUser;
+      const localUser = {
+        uid: user?.uid ?? null,
+        email: user?.email ?? null,
+        provider: user?.providerData?.[0]?.providerId ?? null,
+        firstName,
+        lastName,
+        displayName,
+        photoUrl: base64Photo ?? null,
+      };
+      localStorage.setItem("user", JSON.stringify(localUser));
+
       navigate("/profile");
+    };
+
+    if (photo) {
+      const reader = new FileReader();
+      reader.onloadend = () => saveProfile(reader.result);
+      reader.readAsDataURL(photo);
+    } else {
+      saveProfile(null);
     }
   };
 
@@ -59,16 +86,15 @@ function ProfileSetupPage() {
               marginBottom: "0.5rem",
               color: "#555",
               fontSize: "14px",
-              textAlign: "left"
+              textAlign: "left",
             }}
           >
-            Profil Fotoğrafı Seç
+            Profile Photo (optional)
           </label>
           <input
             type="file"
             accept="image/*"
             onChange={(e) => setPhoto(e.target.files[0])}
-            required
           />
 
           <button type="submit" className="btn primary" style={{ marginTop: "1rem" }}>

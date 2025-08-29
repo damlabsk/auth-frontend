@@ -10,11 +10,11 @@ function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-
+  // For signup, call /register
   const syncWithBackend = async (user) => {
     if (!user) return;
     const idToken = await user.getIdToken(true);
-  
+
     const body = {
       uid: user.uid,
       email: user.email ?? null,
@@ -22,46 +22,51 @@ function SignupPage() {
       photoUrl: user.photoURL ?? null,
       providerId: user.providerData?.[0]?.providerId ?? null,
     };
-  
-    // Call backend login
+
     const response = await axios.post(
-      "http://localhost:8080/api/v1/auth/login",
+      "http://localhost:8080/api/v1/auth/register",
       body,
       { headers: { Authorization: `Bearer ${idToken}` } }
     );
-  
-    // Load existing local profile (from ProfileSetup)
-    const existingUser = JSON.parse(localStorage.getItem("user") || "{}");
-  
-    // Merge backend + local profile
-    const mergedUser = {
-      ...existingUser,          // keep firstName, lastName, photo if already set
-      ...response.data,         // backend fields (uid, email, etc.)
-      displayName: user.displayName ?? response.data.displayName,
-      photoUrl:
-        user.photoURL ??
-        response.data.photoUrl ??
-        existingUser.photo,     // fallback to local photo
-    };
-  
-    localStorage.setItem("user", JSON.stringify(mergedUser));
-    console.log("✅ Stored user (merged):", mergedUser);
-  
-    // Redirect to profile
-    navigate("/profile");
-  };
-  
 
-  // --- Email/Password signup ---
+    const existingUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+    const mergedUser = {
+      ...response.data, // backend truth
+      ...existingUser,
+      uid: response.data.uid ?? existingUser.uid ?? user.uid,
+      email: response.data.email ?? existingUser.email ?? user.email ?? null,
+      provider:
+        response.data.provider ??
+        existingUser.provider ??
+        user.providerData?.[0]?.providerId ??
+        null,
+      displayName:
+        user.displayName ||
+        response.data.displayName ||
+        existingUser.displayName ||
+        null,
+      firstName:
+        existingUser.firstName || response.data.firstName || null,
+      lastName:
+        existingUser.lastName || response.data.lastName || null,
+      photoUrl:
+        user.photoURL ||
+        response.data.photoUrl ||
+        existingUser.photoUrl ||
+        null,
+    };
+
+    localStorage.setItem("user", JSON.stringify(mergedUser));
+  };
+
+  // Email/Password signup
   const handleEmailSignUp = async (e) => {
     e.preventDefault();
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
-      const user = result.user;
-
-      await syncWithBackend(user);
-
-      // force to profile setup (name/photo missing)
+      await syncWithBackend(result.user);
+      // Collect name/photo next
       navigate("/profile-setup");
     } catch (error) {
       console.error("Email Signup Error:", error.message);
@@ -69,11 +74,12 @@ function SignupPage() {
     }
   };
 
-  // --- OAuth signups ---
+  // OAuth signups
   const handleGoogleSignUp = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       await syncWithBackend(result.user);
+      navigate("/profile");
     } catch (error) {
       console.error("Google Signup Error:", error);
     }
@@ -83,6 +89,7 @@ function SignupPage() {
     try {
       const result = await signInWithPopup(auth, microsoftProvider);
       await syncWithBackend(result.user);
+      navigate("/profile");
     } catch (error) {
       console.error("Microsoft Signup Error:", error);
     }
@@ -92,6 +99,7 @@ function SignupPage() {
     try {
       const result = await signInWithPopup(auth, githubProvider);
       await syncWithBackend(result.user);
+      navigate("/profile");
     } catch (error) {
       console.error("GitHub Signup Error:", error);
     }
@@ -101,6 +109,7 @@ function SignupPage() {
     try {
       const result = await signInWithPopup(auth, linkedinProvider);
       await syncWithBackend(result.user);
+      navigate("/profile");
     } catch (error) {
       console.error("LinkedIn Signup Error:", error);
     }
