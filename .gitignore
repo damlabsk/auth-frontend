@@ -26,3 +26,4 @@ target/
 .DS_Store
 
 auth-service/src/main/resources/firebase-service-account.json
+src/main/resources/firebase-service-account.json
