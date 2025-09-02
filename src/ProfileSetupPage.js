@@ -10,53 +10,52 @@ function ProfileSetupPage() {
   const [photo, setPhoto] = useState(null);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  // ✅ Sync profile with backend
+  const syncWithBackend = async (displayName, photoBase64) => {
+    if (!auth.currentUser) return;
 
-    const saveProfile = async (base64Photo) => {
-      const displayName = `${firstName} ${lastName}`.trim();
+    const idToken = await auth.currentUser.getIdToken(true);
 
-      // Prepare payload for backend
-      const profileData = {
-        displayName,
-        photoUrl: base64Photo,
-        firstName,
-        lastName,
-      };
+    try {
+      // Call backend to update profile
+      const { data } = await axios.post(
+        "http://localhost:8080/api/v1/user-information/update-user-info",
+        {
+          displayName,
+          photoUrl: photoBase64 ?? null,
+        },
+        { headers: { Authorization: `Bearer ${idToken}` } }
+      );
 
-      try {
-        const idToken = await auth.currentUser.getIdToken(true);
-
-        // Persist to backend (register/update)
-        await axios.post("http://localhost:8080/api/v1/auth/register", profileData, {
-          headers: { Authorization: `Bearer ${idToken}` },
-        });
-      } catch (err) {
-        console.error("Profile setup sync failed:", err);
-      }
-
-      // Store locally as well (normalized keys)
-      const user = auth.currentUser;
+      // Save backend response to localStorage
       const localUser = {
-        uid: user?.uid ?? null,
-        email: user?.email ?? null,
-        provider: user?.providerData?.[0]?.providerId ?? null,
-        firstName,
-        lastName,
-        displayName,
-        photoUrl: base64Photo ?? null,
+        id: data.id,
+        uid: data.uid,
+        email: data.email,
+        provider: data.provider,
+        displayName: data.displayName,
+        photoUrl: data.photoUrl,
       };
+
       localStorage.setItem("user", JSON.stringify(localUser));
 
       navigate("/profile");
-    };
+    } catch (err) {
+      console.error("Profile setup sync failed:", err);
+      alert("Could not save profile. Please try again.");
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const displayName = `${firstName} ${lastName}`.trim();
 
     if (photo) {
       const reader = new FileReader();
-      reader.onloadend = () => saveProfile(reader.result);
+      reader.onloadend = () => syncWithBackend(displayName, reader.result);
       reader.readAsDataURL(photo);
     } else {
-      saveProfile(null);
+      syncWithBackend(displayName, null);
     }
   };
 

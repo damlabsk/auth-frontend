@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { auth } from "./firebase";
+import axios from "axios";
 import "./ProfilePage.css";
 
 function ProfilePage() {
@@ -10,31 +12,20 @@ function ProfilePage() {
   const [newLastName, setNewLastName] = useState("");
   const [newPhoto, setNewPhoto] = useState(null);
 
+  // Load user from localStorage on mount
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       const parsed = JSON.parse(storedUser);
-      console.log("✅ Loaded user:", parsed);
 
-      // unify fields (support both signup flows)
       const firstName =
-        parsed.firstName ??
-        (parsed.displayName ? parsed.displayName.split(" ")[0] : "");
+        parsed.displayName?.split(" ")[0] || parsed.firstName || "";
       const lastName =
-        parsed.lastName ??
-        (parsed.displayName
-          ? parsed.displayName.split(" ").slice(1).join(" ")
-          : "");
-      const photo = parsed.photo ?? parsed.photoUrl ?? null;
+        parsed.displayName?.split(" ").slice(1).join(" ") ||
+        parsed.lastName ||
+        "";
 
-      setUser({
-        firstName,
-        lastName,
-        photo,
-        email: parsed.email ?? null,
-        uid: parsed.uid ?? null,
-      });
-
+      setUser(parsed);
       setNewFirstName(firstName);
       setNewLastName(lastName);
     } else {
@@ -47,32 +38,52 @@ function ProfilePage() {
     navigate("/login");
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
 
-    if (newPhoto) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const updatedUser = {
-          ...user,
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        alert("Not logged in. Please log in again.");
+        return;
+      }
+
+      const idToken = await currentUser.getIdToken(true);
+
+      const uploadProfile = async (base64Photo) => {
+        const payload = {
           firstName: newFirstName,
           lastName: newLastName,
-          photo: reader.result,
+          photoUrl: base64Photo,
         };
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-        setUser(updatedUser);
-        setIsEditing(false);
+
+        try {
+          const response = await axios.post(
+            "http://localhost:8080/api/v1/user-information/update-user-info",
+            payload,
+            { headers: { Authorization: `Bearer ${idToken}` } }
+          );
+
+          const updatedUser = response.data;
+          localStorage.setItem("user", JSON.stringify(updatedUser));
+          setUser(updatedUser);
+          setIsEditing(false);
+        } catch (err) {
+          console.error("Profile update failed:", err);
+          alert("Could not update profile, please try again.");
+        }
       };
-      reader.readAsDataURL(newPhoto);
-    } else {
-      const updatedUser = {
-        ...user,
-        firstName: newFirstName,
-        lastName: newLastName,
-      };
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-      setUser(updatedUser);
-      setIsEditing(false);
+
+      if (newPhoto) {
+        const reader = new FileReader();
+        reader.onloadend = () => uploadProfile(reader.result);
+        reader.readAsDataURL(newPhoto);
+      } else {
+        await uploadProfile(user?.photoUrl || null);
+      }
+    } catch (error) {
+      console.error("Profile update error:", error);
+      alert("Could not update profile, please try again.");
     }
   };
 
@@ -99,13 +110,13 @@ function ProfilePage() {
       <div className="profile-content">
         <div className="profile-photo">
           <img
-            src={user.photo || "https://via.placeholder.com/120"}
+            src={user.photoUrl || "https://via.placeholder.com/120"}
             alt="Profile"
           />
         </div>
         <div className="profile-info">
           <h2>
-            {user.firstName} {user.lastName}
+            {user.displayName || `${newFirstName} ${newLastName}`}
             <span className="edit-btn" onClick={() => setIsEditing(true)}>
               Düzenle ✏️
             </span>

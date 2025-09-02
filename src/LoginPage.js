@@ -17,57 +17,41 @@ function LoginPage() {
   const [password, setPassword] = useState("");
 
   const syncWithBackend = async (user) => {
-    if (!user) return;
-    const idToken = await user.getIdToken(true);
+  if (!user) return;
+  const idToken = await user.getIdToken(true);
 
-    const body = {
-      uid: user.uid,
-      email: user.email ?? null,
-      displayName: user.displayName ?? null,
-      photoUrl: user.photoURL ?? null,
-      providerId: user.providerData?.[0]?.providerId ?? null,
-    };
-
-    // Call backend login
-    const response = await axios.post(
+  try {
+    // ✅ First call /auth/login (to ensure DB entry exists/updates)
+    await axios.post(
       "http://localhost:8080/api/v1/auth/login",
-      body,
+      {
+        uid: user.uid,
+        email: user.email ?? null,
+        displayName: user.displayName ?? null,
+        photoUrl: user.photoURL ?? null,
+        providerId: user.providerData?.[0]?.providerId ?? null,
+      },
       { headers: { Authorization: `Bearer ${idToken}` } }
     );
 
-    // Load existing local profile
-    const existingUser = JSON.parse(localStorage.getItem("user") || "{}");
+    // ✅ Then call /user-information/me to fetch full DB truth
+    const response = await axios.get(
+      "http://localhost:8080/api/v1/user-information/me",
+      { headers: { Authorization: `Bearer ${idToken}` } }
+    );
 
-    // Merge carefully (prefer non-null values; keep local names/photo if backend/Firebase are null)
-    const mergedUser = {
-      ...response.data, // backend truth
-      ...existingUser,  // keep locally set fields (firstName, lastName, photoUrl) if present
-      uid: response.data.uid ?? existingUser.uid ?? user.uid,
-      email: response.data.email ?? existingUser.email ?? user.email ?? null,
-      provider:
-        response.data.provider ??
-        existingUser.provider ??
-        user.providerData?.[0]?.providerId ??
-        null,
-      displayName:
-        user.displayName ||
-        response.data.displayName ||
-        existingUser.displayName ||
-        null,
-      firstName:
-        existingUser.firstName || response.data.firstName || null,
-      lastName:
-        existingUser.lastName || response.data.lastName || null,
-      photoUrl:
-        user.photoURL ||
-        response.data.photoUrl ||
-        existingUser.photoUrl ||
-        null,
-    };
+    const backendUser = response.data;
 
-    localStorage.setItem("user", JSON.stringify(mergedUser));
+    // ✅ Store backend truth in localStorage
+    localStorage.setItem("user", JSON.stringify(backendUser));
+
     navigate("/profile");
-  };
+  } catch (err) {
+    console.error("Backend sync failed:", err);
+    alert("Login failed, please try again.");
+  }
+};
+
 
   // Email/Password login
   const handleEmailLogin = async (e) => {
