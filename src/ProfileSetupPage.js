@@ -10,35 +10,23 @@ function ProfileSetupPage() {
   const [photo, setPhoto] = useState(null);
   const navigate = useNavigate();
 
-  // ✅ Sync profile with backend
+  // ✅ Sync profile with backend using Base64
   const syncWithBackend = async (displayName, photoBase64) => {
     if (!auth.currentUser) return;
-
     const idToken = await auth.currentUser.getIdToken(true);
 
     try {
-      // Call backend to update profile
       const { data } = await axios.post(
         "http://localhost:8080/api/v1/user-information/update-user-info",
         {
-          displayName,
-          photoUrl: photoBase64 ?? null,
+          firstName,
+          lastName,
+          photoBase64: photoBase64 ?? null,
         },
         { headers: { Authorization: `Bearer ${idToken}` } }
       );
 
-      // Save backend response to localStorage
-      const localUser = {
-        id: data.id,
-        uid: data.uid,
-        email: data.email,
-        provider: data.provider,
-        displayName: data.displayName,
-        photoUrl: data.photoUrl,
-      };
-
-      localStorage.setItem("user", JSON.stringify(localUser));
-
+      localStorage.setItem("user", JSON.stringify(data));
       navigate("/profile");
     } catch (err) {
       console.error("Profile setup sync failed:", err);
@@ -79,15 +67,7 @@ function ProfileSetupPage() {
             required
           />
 
-          <label
-            style={{
-              display: "block",
-              marginBottom: "0.5rem",
-              color: "#555",
-              fontSize: "14px",
-              textAlign: "left",
-            }}
-          >
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
             Profile Photo (optional)
           </label>
           <input

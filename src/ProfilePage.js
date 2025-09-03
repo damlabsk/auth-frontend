@@ -40,49 +40,45 @@ function ProfilePage() {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
 
+    const idToken = await currentUser.getIdToken(true);
+
+    let photoBase64 = user?.photoBase64 || null;
+
+    if (newPhoto) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        photoBase64 = reader.result;
+        await saveProfile(photoBase64, idToken);
+      };
+      reader.readAsDataURL(newPhoto);
+    } else {
+      await saveProfile(photoBase64, idToken);
+    }
+  };
+
+  const saveProfile = async (photoBase64, idToken) => {
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        alert("Not logged in. Please log in again.");
-        return;
-      }
-
-      const idToken = await currentUser.getIdToken(true);
-
-      const uploadProfile = async (base64Photo) => {
-        const payload = {
-          firstName: newFirstName,
-          lastName: newLastName,
-          photoUrl: base64Photo,
-        };
-
-        try {
-          const response = await axios.post(
-            "http://localhost:8080/api/v1/user-information/update-user-info",
-            payload,
-            { headers: { Authorization: `Bearer ${idToken}` } }
-          );
-
-          const updatedUser = response.data;
-          localStorage.setItem("user", JSON.stringify(updatedUser));
-          setUser(updatedUser);
-          setIsEditing(false);
-        } catch (err) {
-          console.error("Profile update failed:", err);
-          alert("Could not update profile, please try again.");
-        }
+      const payload = {
+        firstName: newFirstName,
+        lastName: newLastName,
+        photoBase64,
       };
 
-      if (newPhoto) {
-        const reader = new FileReader();
-        reader.onloadend = () => uploadProfile(reader.result);
-        reader.readAsDataURL(newPhoto);
-      } else {
-        await uploadProfile(user?.photoUrl || null);
-      }
+      const response = await axios.post(
+        "http://localhost:8080/api/v1/user-information/update-user-info",
+        payload,
+        { headers: { Authorization: `Bearer ${idToken}` } }
+      );
+
+      const updatedUser = response.data;
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      setIsEditing(false);
     } catch (error) {
-      console.error("Profile update error:", error);
+      console.error("Profile update failed:", error);
       alert("Could not update profile, please try again.");
     }
   };
@@ -110,7 +106,7 @@ function ProfilePage() {
       <div className="profile-content">
         <div className="profile-photo">
           <img
-            src={user.photoUrl || "https://via.placeholder.com/120"}
+            src={user.photoBase64 || "https://via.placeholder.com/120"}
             alt="Profile"
           />
         </div>
