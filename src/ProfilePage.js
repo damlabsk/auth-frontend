@@ -94,7 +94,7 @@ function ProfilePage() {
         </div>
         <div className="topbar-right">
           <button className="topbar-btn" onClick={() => navigate("/profile")}>
-            Profilim
+            My profile
           </button>
           <button className="topbar-btn logout" onClick={handleLogout}>
             Log out
@@ -114,10 +114,9 @@ function ProfilePage() {
           <h2>
             {user.displayName || `${newFirstName} ${newLastName}`}
             <span className="edit-btn" onClick={() => setIsEditing(true)}>
-              Düzenle ✏️
+              Edit ✏️
             </span>
           </h2>
-          <p>Hoşgeldin, profil sayfana girdin!</p>
         </div>
       </div>
 
@@ -128,7 +127,7 @@ function ProfilePage() {
       {isEditing && (
         <div className="modal-overlay">
           <div className="modal">
-            <h3>Profili Düzenle</h3>
+            <h3>Change the Profile</h3>
             <form onSubmit={handleSave}>
               <input
                 type="text"
