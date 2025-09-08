@@ -94,7 +94,7 @@ function ProfilePage() {
         </div>
         <div className="topbar-right">
           <button className="topbar-btn" onClick={() => navigate("/profile")}>
-            My profile
+            My Profile
           </button>
           <button className="topbar-btn logout" onClick={handleLogout}>
             Log out
@@ -117,6 +117,7 @@ function ProfilePage() {
               Edit ✏️
             </span>
           </h2>
+          <p>Welcome, you are on your profile page!</p>
         </div>
       </div>
 
@@ -127,7 +128,7 @@ function ProfilePage() {
       {isEditing && (
         <div className="modal-overlay">
           <div className="modal">
-            <h3>Change the Profile</h3>
+            <h3>Edit Profile</h3>
             <form onSubmit={handleSave}>
               <input
                 type="text"
@@ -148,14 +149,14 @@ function ProfilePage() {
               />
               <div className="modal-actions">
                 <button type="submit" className="btn primary">
-                  Kaydet
+                  Save
                 </button>
                 <button
                   type="button"
                   className="btn cancel"
                   onClick={() => setIsEditing(false)}
                 >
-                  İptal
+                  Cancel
                 </button>
               </div>
             </form>
